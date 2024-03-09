@@ -1,0 +1,114 @@
+---
+title: "Uber Data Analysis"
+output: html_notebook
+---
+ 
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+library(DT)
+library(scales)
+
+```
+ 
+
+```{r}
+# Read the data monthly 
+april <- read.csv("C:/Users/purva/Downloads/Rproject/uber-raw-data-apr14.csv")
+
+```
+```{r}
+june <- read.csv("C:/Users/purva/Downloads/Rproject/uber-raw-data-jun14.csv")
+july <- read.csv("C:/Users/purva/Downloads/Rproject/uber-raw-data-jul14.csv")
+august <- read.csv("C:/Users/purva/Downloads/Rproject/uber-raw-data-aug14.csv")
+```
+```{r}
+# bind the data using rbind 
+data <- rbind(april,june,july,august)
+head(data)
+
+#save the file IN CSV format in device 
+write.csv(data, "uber.csv", row.names = FALSE)
+```
+
+```{r}
+# check dimension of data 
+cat('The dimension of data:- ',dim(data))
+```
+```{r}
+# change the format of date and create individual column of month and year
+data$Date.Time <- as.POSIXct(data$Date.Time, format="%m/%d/%Y %H:%M:%S")
+data$Time <- format(as.POSIXct(data$Date.Time, format = "%m/%d/%Y %H:%M:%S"), format="%H:%M:%S")
+data$Date.Time <- ymd_hms(data$Date.Time)
+data$day <- factor(day(data$Date.Time))
+data$month <- factor(month(data$Date.Time, label=TRUE))
+data$year <- factor(year(data$Date.Time))
+data$hour = factor(hour(hms(data$Time)))
+head(data)
+```
+
+
+```{r}
+# Aggregate the data by month and hour
+month_hour_data <- data %>% group_by(month, hour) %>%  dplyr::summarize(Total = n())
+
+ggplot(month_hour_data, aes(hour, Total, fill=month)) + 
+geom_bar(stat = "identity") + 
+ggtitle("Trips by Hour and Month") + 
+scale_y_continuous(labels = comma)
+```
+
+```{r}
+# Aggregate the data by day and hour
+day_hour_data <- data %>% group_by(day , hour ) %>%  dplyr::summarize(Total = n())
+
+ggplot(day_hour_data, aes(day, hour, fill = Total)) +
+geom_tile(color = "White") + 
+ggtitle("Heat Map by Hour and Day")
+```
+
+```{r}
+# Aggregate data by month and trips 
+colors <- c("blue", "green", "red", "orange") # Example colors, you can customize this list
+
+Trips_by_month <- data %>% 
+  group_by(month) %>% 
+  dplyr::summarize(Total = n())
+
+ggplot(Trips_by_month, aes(month, Total, fill = month)) + 
+  geom_bar(stat = "identity") + 
+  ggtitle("Trips in a month") + 
+  theme(legend.position = "none") + 
+  scale_y_continuous(labels = scales::comma) + 
+  scale_fill_manual(values = colors)
+
+```
+
+```{r}
+#MAP BASED ON UBER RIDES DURING 2014 (APR-AUG)
+ggplot(data, aes(x=Lon, y=Lat)) +
+  geom_point(size=1, color = "blue")
+```
+```{r}
+# maximum and minimum latitude and longitude of data
+max_lat <- max(data$Lat)
+max_lon <- max(data$Lon)  
+min_lat <- min(data$Lat)
+min_lon <- min(data$Lon)
+```
+
+```{r}
+# Map using maximum latitude and longitude 
+ggplot(data, aes(x=Lon, y=Lat)) +
+  geom_point(size=1, color = "skyblue")+
+  scale_x_continuous(limits=c(min_lon, max_lon)) +
+  scale_y_continuous(limits=c(min_lat, max_lat)) +
+  theme_map()
+   
+       
+
+```
+
